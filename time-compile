@@ -1,0 +1,217 @@
+# -*- ruby -*-
+
+$timestamp_regex = /^(\d+)[h:](\d+)$/
+
+def minutes_to_human_readable nb_minutes
+  hours = nb_minutes / 60
+  minutes = nb_minutes % 60
+  str = ""
+  if hours > 0
+    str += sprintf "%dh", hours
+  end
+  if minutes > 0
+    str += sprintf "%02dm", minutes
+  end
+  str
+end
+
+unless /2h/ =~ minutes_to_human_readable(120)
+  raise
+end
+
+class Timestamp
+  def initialize(line)
+    @ts_line = line
+    @lines = []
+  end
+
+  def lines
+    @lines
+  end
+
+  def time
+    res = $timestamp_regex.match @ts_line
+    if res == nil
+      raise
+    end
+    res[1].to_i * 60 + res[2].to_i
+  end
+end
+
+unless Timestamp.new("08h03").time == 8*60+3
+  raise
+end
+
+class Date
+end
+
+class Line
+  def initialize(line)
+    @line = line
+  end
+
+  def to_s
+    @line
+  end
+
+  def timestamp?
+    $timestamp_regex =~ @line
+  end
+
+  def to_timestamp
+    Timestamp.new @line
+  end
+
+  def date?
+    /^\d\d\d\d-\d\d-\d\d/ =~ @line
+  end
+end
+
+if Line.new("hello\n").timestamp?
+  raise
+end
+unless Line.new("04h05\n").timestamp?
+  raise
+end
+unless Line.new("04h05\n").to_timestamp.time == 4*60+5
+  raise
+end
+
+class Interval
+  def initialize(start, stop)
+    @start = start
+    @stop = stop
+    @lines = start.lines
+  end
+
+  def time
+    @stop.time - @start.time
+  end
+
+  def lines
+    @lines
+  end
+
+  def plus_line
+    index = @lines.find_index { |line| /^\s*\+/ =~ line.to_s }
+    if index == nil
+      return nil
+    end
+    @lines[index]
+  end
+
+  def category_name
+    pl = plus_line
+    if pl == nil
+      return "pause"
+    else
+      match = /^\s*\+\s*(\S+)/.match plus_line.to_s
+      if match == nil
+        raise
+      end
+      return match[1]
+    end
+  end
+end
+
+class Category
+  def initialize name
+    @name = name
+    @intervals = []
+  end
+
+  def intervals
+    @intervals
+  end
+
+  def time
+    accu_time = 0
+    @intervals.each { |iv| accu_time += iv.time }
+    accu_time
+  end
+
+  def lines
+    lines = []
+    @intervals.each do |iv|
+      lines += iv.lines
+    end
+    lines
+  end
+
+  def name
+    @name
+  end
+
+  def to_s
+    "#{@name}" + lines.join("\\\\")
+  end
+end
+
+class TimeCompiler
+  def main(lines)
+    timestamps = []
+    lines.each do |line_str|
+      line = Line.new(line_str)
+      if line.timestamp?
+        timestamps << line.to_timestamp
+      else
+        timestamps.last.lines << line
+      end
+    end
+
+    intervals = []
+    timestamps_last_index = timestamps.length - 1
+    timestamps.each_index do |i|
+      next if i == timestamps_last_index
+      intervals << Interval.new(timestamps[i], timestamps[i+1])
+    end
+
+    categories = Hash.new
+    intervals.each do |iv|
+      cat_name = iv.category_name
+      unless categories.has_key? cat_name
+        categories[cat_name] = Category.new cat_name
+      end
+      categories[cat_name].intervals << iv
+    end
+
+    pauses = categories.delete_if { |name, _| name == "pause" }
+    if pauses.empty?
+      pause = nil
+    else
+      pause = pauses["pause"]
+    end
+
+    total = 0
+    categories.each_value do |cat|
+      total += cat.time
+    end
+
+    categories.each_value do |cat|
+      percent = sprintf "%.0f%%", (100 * cat.time / total)
+      percent_wsr = sprintf "%.0f%%", (100 * cat.time / total * 20/100)
+      puts "#{cat.name}: #{minutes_to_human_readable cat.time} (#{percent}) (WSR: #{percent_wsr})"
+      cat.lines.each do |line|
+        puts "  #{line}"
+      end
+    end
+
+    puts "total: #{minutes_to_human_readable total}"
+    puts "half time: #{minutes_to_human_readable (total/2)}"
+    
+    virtual_ssp_time = 0
+    if categories.include? "ssp"
+      virtual_ssp_time += categories["ssp"].time
+    end
+    if categories.include? "im"
+      virtual_ssp_time += categories["im"].time / 2
+    end
+    puts "ssp + im/2: #{minutes_to_human_readable virtual_ssp_time}"
+
+    if pause != nil
+      puts "#{pause.name}: #{minutes_to_human_readable pause.time}"
+    end
+  end
+end
+
+TimeCompiler.new.main $stdin.each
