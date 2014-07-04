@@ -178,14 +178,14 @@ class TimeCompiler
       end
 
     total = 0
-    topics.each_value do |cat|
-      total += cat.time
+    topics.each_value do |topic|
+      total += topic.time
     end
 
-    topics.each_value do |cat|
-      percent = sprintf "%.0f%%", (100 * cat.time / total)
-      puts "#{cat.name}: #{minutes_to_human_readable cat.time} #{percent}"
-      cat.lines.each do |line|
+    topics.each_value do |topic|
+      percent = sprintf "%.0f%%", (100 * topic.time / total)
+      puts "#{topic.name}: #{minutes_to_human_readable topic.time} #{percent}"
+      topic.lines.each do |line|
         puts "  #{line}"
       end
     end
