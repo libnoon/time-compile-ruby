@@ -87,8 +87,9 @@ class Interval
     @lines
   end
 
-  def topic_name
-    re = /(?:^|\s+)\+(\S+)/
+  # char may be "+", ":", ...
+  def topic_name(char)
+    re = /(?:^|\s+)#{char}(\S+)/
     @lines.each do |line|
       m = re.match line.to_s
       if m
@@ -157,7 +158,7 @@ class TimeCompiler
     topics = Hash.new
 
     intervals.each do |iv|
-      topic_name = iv.topic_name
+      topic_name = iv.topic_name("+")
       if topic_name == nil
         topic_name = "pause"
       end
