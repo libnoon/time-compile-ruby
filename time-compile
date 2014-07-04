@@ -14,14 +14,18 @@ def minutes_to_human_readable nb_minutes
   end
   str
 end
-
-unless /2h/ =~ minutes_to_human_readable(120)
-  raise
-end
+# Examples:
+minutes_to_human_readable(120) == "2h" or raise
+minutes_to_human_readable(15) == "15m" or raise
+minutes_to_human_readable(65) == "1h05m" or raise
 
 class Timestamp
   def initialize(line)
+    # @ts_line is the line of the timestamp itself.
     @ts_line = line
+
+    # @lines represent the lines that follow this timestamp until the
+    # next timestamp.
     @lines = []
   end
 
@@ -31,19 +35,12 @@ class Timestamp
 
   def time
     res = $timestamp_regex.match @ts_line
-    if res == nil
-      raise
-    end
+    res != nil or raise
     res[1].to_i * 60 + res[2].to_i
   end
 end
-
-unless Timestamp.new("08h03").time == 8*60+3
-  raise
-end
-
-class Date
-end
+# Example:
+Timestamp.new("08h03").time == 8*60+3 or raise
 
 class Line
   def initialize(line)
@@ -66,18 +63,15 @@ class Line
     /^\d\d\d\d-\d\d-\d\d/ =~ @line
   end
 end
-
+# Examples:
 if Line.new("hello\n").timestamp?
   raise
 end
-unless Line.new("04h05\n").timestamp?
-  raise
-end
-unless Line.new("04h05\n").to_timestamp.time == 4*60+5
-  raise
-end
+Line.new("04h05\n").timestamp? or raise
+Line.new("04h05\n").to_timestamp.time == 4*60+5 or raise
 
 class Interval
+  # start and stop are Timestamp objects.
   def initialize(start, stop)
     @start = start
     @stop = stop
@@ -88,6 +82,7 @@ class Interval
     @stop.time - @start.time
   end
 
+  # This is read-write.
   def lines
     @lines
   end
@@ -105,7 +100,7 @@ class Interval
     if pl == nil
       return "pause"
     else
-      match = /^\s*\+\s*(\S+)/.match plus_line.to_s
+      match = /(?:^|\s+)\+(\S+)/.match plus_line.to_s
       if match == nil
         raise
       end
@@ -114,7 +109,7 @@ class Interval
   end
 end
 
-class Category
+class Topic
   def initialize name
     @name = name
     @intervals = []
@@ -149,6 +144,7 @@ end
 
 class TimeCompiler
   def main(lines)
+    # Read all lines and fold them into Timestamp objects added to the "timestamps" list.
     timestamps = []
     lines.each do |line_str|
       line = Line.new(line_str)
@@ -159,6 +155,7 @@ class TimeCompiler
       end
     end
 
+    # Create one Interval for each pair of Timestamp; store into the "intervals" list.
     intervals = []
     timestamps_last_index = timestamps.length - 1
     timestamps.each_index do |i|
@@ -166,28 +163,32 @@ class TimeCompiler
       intervals << Interval.new(timestamps[i], timestamps[i+1])
     end
 
-    categories = Hash.new
+    # Create and fill Topics into the "topics" hash.
+    topics = Hash.new
+
     intervals.each do |iv|
       cat_name = iv.category_name
-      unless categories.has_key? cat_name
-        categories[cat_name] = Category.new cat_name
+      unless topics.has_key? cat_name
+        topics[cat_name] = Topic.new cat_name
       end
-      categories[cat_name].intervals << iv
+      topics[cat_name].intervals << iv
     end
 
-    pauses = categories.delete_if { |name, _| name == "pause" }
-    if pauses.empty?
-      pause = nil
-    else
-      pause = pauses["pause"]
-    end
+    pause =
+      if topics.has_key? "pause"
+        p = topics["pause"]
+        topics.delete("pause")
+        p
+      else
+        nil
+      end
 
     total = 0
-    categories.each_value do |cat|
+    topics.each_value do |cat|
       total += cat.time
     end
 
-    categories.each_value do |cat|
+    topics.each_value do |cat|
       percent = sprintf "%.0f%%", (100 * cat.time / total)
       puts "#{cat.name}: #{minutes_to_human_readable cat.time} #{percent}"
       cat.lines.each do |line|
@@ -197,7 +198,7 @@ class TimeCompiler
 
     puts "total: #{minutes_to_human_readable total}"
     
-    if pause != nil
+    if pause
       puts "#{pause.name}: #{minutes_to_human_readable pause.time}"
     end
   end
