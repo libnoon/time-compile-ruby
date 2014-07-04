@@ -214,4 +214,23 @@ class TimeCompiler
   end
 end
 
+class TimeCompilerForTest < TimeCompiler
+  def initialize
+    @out = []
+  end
+
+  def puts str
+    @out << str
+  end
+
+  def out
+    @out
+  end
+end
+
+begin
+  tc = TimeCompilerForTest.new
+  tc.main []
+end
+
 TimeCompiler.new.main $stdin.each
