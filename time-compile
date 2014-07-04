@@ -87,7 +87,7 @@ class Interval
     @lines
   end
 
-  def plus_line
+  def topic_line
     index = @lines.find_index { |line| /^\s*\+/ =~ line.to_s }
     if index == nil
       return nil
@@ -95,12 +95,11 @@ class Interval
     @lines[index]
   end
 
-  def category_name
-    pl = plus_line
-    if pl == nil
+  def topic_name
+    if topic_line == nil
       return "pause"
     else
-      match = /(?:^|\s+)\+(\S+)/.match plus_line.to_s
+      match = /(?:^|\s+)\+(\S+)/.match topic_line.to_s
       if match == nil
         raise
       end
@@ -167,11 +166,11 @@ class TimeCompiler
     topics = Hash.new
 
     intervals.each do |iv|
-      cat_name = iv.category_name
-      unless topics.has_key? cat_name
-        topics[cat_name] = Topic.new cat_name
+      topic_name = iv.topic_name
+      unless topics.has_key? topic_name
+        topics[topic_name] = Topic.new topic_name
       end
-      topics[cat_name].intervals << iv
+      topics[topic_name].intervals << iv
     end
 
     pause =
