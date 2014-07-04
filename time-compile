@@ -189,25 +189,14 @@ class TimeCompiler
 
     categories.each_value do |cat|
       percent = sprintf "%.0f%%", (100 * cat.time / total)
-      percent_wsr = sprintf "%.0f%%", (100 * cat.time / total * 20/100)
-      puts "#{cat.name}: #{minutes_to_human_readable cat.time} (#{percent}) (WSR: #{percent_wsr})"
+      puts "#{cat.name}: #{minutes_to_human_readable cat.time} #{percent}"
       cat.lines.each do |line|
         puts "  #{line}"
       end
     end
 
     puts "total: #{minutes_to_human_readable total}"
-    puts "half time: #{minutes_to_human_readable (total/2)}"
     
-    virtual_ssp_time = 0
-    if categories.include? "ssp"
-      virtual_ssp_time += categories["ssp"].time
-    end
-    if categories.include? "im"
-      virtual_ssp_time += categories["im"].time / 2
-    end
-    puts "ssp + im/2: #{minutes_to_human_readable virtual_ssp_time}"
-
     if pause != nil
       puts "#{pause.name}: #{minutes_to_human_readable pause.time}"
     end
