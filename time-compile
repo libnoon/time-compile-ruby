@@ -89,7 +89,8 @@ class Interval
 
   # char may be "+", ":", ...
   def topic_name(char)
-    re = /(?:^|\s+)#{char}(\S+)/
+    re_s = "(?:^|\\s+)#{Regexp.escape(char)}(\\S+)"
+    re = Regexp.compile(re_s)
     @lines.each do |line|
       m = re.match line.to_s
       if m
