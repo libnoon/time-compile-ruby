@@ -186,9 +186,6 @@ class TimeCompiler
     topics.each_value do |topic|
       percent = sprintf "%.0f%%", (100 * topic.time / total)
       puts "#{topic.name}: #{minutes_to_human_readable topic.time} #{percent}"
-      topic.lines.each do |line|
-        puts "  #{line}"
-      end
     end
 
     puts "total: #{minutes_to_human_readable total}"
