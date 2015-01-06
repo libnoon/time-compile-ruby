@@ -135,6 +135,15 @@ class Topic
 end
 
 class TimeCompiler
+  def topic_transform(name)
+    new_name = case name
+               when nil then "pause"
+               when "mail" then "ac"
+               else name
+               end
+    return new_name
+  end
+
   def main(lines)
     # Read all lines and fold them into Timestamp objects added to the "timestamps" list.
     timestamps = []
@@ -160,9 +169,7 @@ class TimeCompiler
 
     intervals.each do |iv|
       topic_name = iv.topic_name("+")
-      if topic_name == nil
-        topic_name = "pause"
-      end
+      topic_name = topic_transform(topic_name)
       unless topics.has_key? topic_name
         topics[topic_name] = Topic.new topic_name
       end
