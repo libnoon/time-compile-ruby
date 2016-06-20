@@ -139,9 +139,24 @@ class TimeCompiler
     new_name = case name
                when nil then "pause"
                when "mail" then "ac"
+               when "wsr" then "ac"
                else name
                end
     return new_name
+  end
+
+  def puts_topics_percents(topics)
+    total = 0
+    topics.each_value do |topic|
+      total += topic.time
+    end
+
+    topics.each_value do |topic|
+      percent = sprintf "%.0f%%", (100 * topic.time / total)
+      puts "#{topic.name}: #{minutes_to_human_readable topic.time} #{percent}"
+    end
+
+    puts "total (without pauses): #{minutes_to_human_readable total}"
   end
 
   def main(lines)
@@ -185,17 +200,13 @@ class TimeCompiler
         nil
       end
 
-    total = 0
-    topics.each_value do |topic|
-      total += topic.time
-    end
+    puts "full:"
+    puts_topics_percents(topics)
 
-    topics.each_value do |topic|
-      percent = sprintf "%.0f%%", (100 * topic.time / total)
-      puts "#{topic.name}: #{minutes_to_human_readable topic.time} #{percent}"
-    end
-
-    puts "total: #{minutes_to_human_readable total}"
+    puts "\nwithout ac:"
+    topics_without_ac = topics
+    topics_without_ac.delete("ac")
+    puts_topics_percents(topics_without_ac)
     
     if pause
       puts "#{pause.name}: #{minutes_to_human_readable pause.time}"
