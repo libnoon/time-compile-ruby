@@ -167,7 +167,11 @@ class TimeCompiler
       if line.timestamp?
         timestamps << line.to_timestamp
       else
-        timestamps.last.lines << line
+        if timestamps.empty?
+          raise sprintf "Found line {%s} without prior timestamp", line.to_s.chomp
+        else
+          timestamps.last.lines << line
+        end
       end
     end
 
